@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CrossDB AI</title>
+    <style>
+        body {
+            font-family: -apple-system, Segoe UI, sans-serif;
+            max-width: 640px;
+            margin: 60px auto;
+            padding: 0 16px;
+            color: #1a1a1a;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        p.sub {
+            color: #666;
+            margin-top: 0;
+            margin-bottom: 28px;
+        }
+
+        form {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type=text] {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #333;
+        }
+
+        button:disabled {
+            background: #999;
+            cursor: default;
+        }
+
+        #clearBtn {
+            background: transparent;
+            color: #666;
+            border: 1px solid #ccc;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        #clearBtn:hover {
+            background: #f4f4f4;
+            color: #1a1a1a;
+        }
+
+        .chat {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg {
+            padding: 12px 16px;
+            border-radius: 8px;
+            line-height: 1.5;
+            max-width: 85%;
+        }
+
+        .msg.user {
+            background: #1a1a1a;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .msg.assistant {
+            background: #f4f6f8;
+            color: #1a1a1a;
+            align-self: flex-start;
+        }
+
+        .error {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: #fdecea;
+            color: #b3261e;
+            border-radius: 8px;
+        }
+
+        .loading {
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>CrossDB AI</h1>
+    <p class="sub">Ask a question that spans the SQL (students/jobs) and MongoDB (interview feedback) data. Follow-up
+        questions remember context.</p>
+
+    <form id="askForm">
+        <input type="text" id="questionInput" placeholder="e.g. What was Alice Smith's technical interview feedback?"
+            autocomplete="off">
+        <button type="submit" id="askBtn">Ask</button>
+    </form>
+    <button id="clearBtn" type="button">Clear conversation</button>
+
+    <div class="chat" id="chat"></div>
+    <div id="errorBox"></div>
+
+    <script>
+        const form = document.getElementById('askForm');
+        const input = document.getElementById('questionInput');
+        const askBtn = document.getElementById('askBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const chat = document.getElementById('chat');
+        const errorBox = document.getElementById('errorBox');
+
+        function addMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = 'msg ' + role;
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function setError(msg) {
+            errorBox.innerHTML = msg ? `<div class="error">${msg}</div>` : '';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = input.value.trim();
+            if (!question) return;
+
+            setError('');
+            addMessage('user', question);
+            input.value = '';
+            askBtn.disabled = true;
+            askBtn.textContent = 'Thinking...';
+
+            try {
+                const res = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    setError(data.error || 'Something went wrong.');
+                } else {
+                    addMessage('assistant', data.answer);
+                }
+            } catch (err) {
+                setError('Network error — is the server running?');
+            } finally {
+                askBtn.disabled = false;
+                askBtn.textContent = 'Ask';
+            }
+        });
+
+        clearBtn.addEventListener('click', async () => {
+            await fetch('/clear', { method: 'POST' });
+            chat.innerHTML = '';
+            setError('');
+        });
+    </script>
+</body>
+
+</html>

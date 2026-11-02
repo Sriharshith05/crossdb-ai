@@ -1,0 +1,19 @@
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Windows
+desktop.ini
+Thumbs.db
+
+# Python virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+.env.*
+!.env.example
